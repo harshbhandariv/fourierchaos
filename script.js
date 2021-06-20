@@ -1,57 +1,39 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const ctx1 = canvas.getContext("2d");
+let duration;
+let scale;
+canvas.width = 600;
+canvas.height = 500;
 const { height, width } = canvas;
-console.log(height, width);
-const duration = 10;
-const radius = 100;
-const line = {
-  sx: width / 2,
-  sy: height / 2,
-  ex: width / 2 + radius,
-  ey: height / 2,
-};
-const line2 = {
-  sx: width / 2,
-  sy: height / 2,
-  ex: width / 2 + radius,
-  ey: height / 2,
-};
-const line3 = {
-  sx: width / 2,
-  sy: height / 2,
-  ex: width / 2 + radius,
-  ey: height / 2,
-};
-const trail = [{ x: width / 2 + radius, y: height / 2 }];
-ctx.beginPath();
-ctx.arc(width / 2, height / 2, radius, Math.PI * 2, false);
-ctx1.arc(width / 2, height / 2, radius, Math.PI * 1, false);
-ctx.moveTo(line.sx, line.sy);
-ctx.lineTo(line.ex, line.ey);
+let lines = [];
+let trail = [];
 let start;
 function update(timestamp) {
-  if (start === undefined) start = timestamp;
-  const elapsed = timestamp - start;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (start == undefined) start = timestamp;
+  let elapsed = timestamp - start;
+  ctx.clearRect(0, 0, width, height);
+  updateLengthPos(elapsed);
   ctx.beginPath();
-  updateRadiusPos(elapsed);
   redraw();
   ctx.stroke();
-  ctx.beginPath();
   ctx.strokeStyle = "rgba(255, 0, 0, 0.2)";
-  ctx.moveTo(line.sx, line.sy);
-  ctx.lineTo(line.ex, line.ey);
-  ctx.moveTo(line.ex + radius, line.ey);
-  ctx.arc(line.ex, line.ey, radius, Math.PI * 2, false);
-  ctx.moveTo(line.ex, line.ey);
-  ctx.lineTo(line2.ex, line2.ey);
-  ctx.moveTo(line2.ex + radius / 2, line2.ey);
-  ctx.arc(line2.ex, line2.ey, radius / 2, Math.PI * 2, false);
-  ctx.moveTo(line2.ex, line2.ey);
-  ctx.lineTo(line3.ex, line3.ey);
-  ctx.moveTo(line3.ex + radius / 4, line3.ey);
-  ctx.arc(line3.ex, line3.ey, radius / 4, Math.PI * 2, false);
+  for (let i = 0; i < lines.length; i++) {
+    ctx.moveTo(lines[i].sx, lines[i].sy);
+    ctx.lineTo(lines[i].ex, lines[i].ey);
+    ctx.moveTo(
+      lines[i].ex +
+        (lines[i].length > 0 ? lines[i].length : -lines[i].length) * scale,
+      lines[i].ey
+    );
+    ctx.arc(
+      lines[i].ex,
+      lines[i].ey,
+      Math.abs(lines[i].length * scale),
+      Math.PI * 2,
+      false
+    );
+    ctx.moveTo(lines[i].ex, lines[i].ey);
+  }
   ctx.stroke();
   window.requestAnimationFrame(update);
 }
@@ -64,29 +46,87 @@ function redraw() {
   }
 }
 
-function updateRadiusPos(elapsed) {
-  line.ex =
-    line.sx +
-    radius * Math.cos((1 * 2 * Math.PI * elapsed) / (duration * 1000));
-  line.ey =
-    line.sy +
-    radius * Math.sin((1 * 2 * Math.PI * elapsed) / (duration * 1000));
-  line2.sx = line.ex;
-  line2.sy = line.ey;
-  line2.ex =
-    line2.sx +
-    (radius / 2) * Math.cos((2 * 2 * Math.PI * elapsed) / (duration * 1000));
-  line2.ey =
-    line2.sy +
-    (radius / 2) * Math.sin((2 * 2 * Math.PI * elapsed) / (duration * 1000));
-  line3.sx = line2.ex;
-  line3.sy = line2.ey;
-  line3.ex =
-    line3.sx +
-    (radius / 4) * Math.cos((3 * 2 * Math.PI * elapsed) / (duration * 1000));
-  line3.ey =
-    line3.sy +
-    (radius / 4) * Math.sin((3 * 2 * Math.PI * elapsed) / (duration * 1000));
-  if (elapsed < 11000) trail.push({ x: line3.ex, y: line3.ey });
+function updateLengthPos(elapsed) {
+  lines[0].ex =
+    lines[0].sx +
+    lines[0].length *
+      scale *
+      Math.cos(
+        (0 * 2 * Math.PI * elapsed) / (duration * 1000) + lines[0].phase
+      );
+  lines[0].ey =
+    lines[0].sy +
+    lines[0].length *
+      scale *
+      Math.sin(
+        (0 * 2 * Math.PI * elapsed) / (duration * 1000) + lines[0].phase
+      );
+  for (let i = 1; i < lines.length; i++) {
+    lines[i].sx = lines[i - 1].ex;
+    lines[i].sy = lines[i - 1].ey;
+    lines[i].ex =
+      lines[i].sx +
+      Math.abs(lines[i].length) *
+        scale *
+        Math.cos(
+          (i * 2 * Math.PI * elapsed) / (duration * 1000) + lines[i].phase
+        );
+    lines[i].ey =
+      lines[i].sy +
+      lines[i].length *
+        scale *
+        Math.sin(
+          (i * 2 * Math.PI * elapsed) / (duration * 1000) + lines[i].phase
+        );
+  }
+  if (elapsed < duration * 1000 * 1.01)
+    trail.push({
+      x: lines[lines.length - 1].ex,
+      y: lines[lines.length - 1].ey,
+    });
 }
-update();
+const lengths = document.getElementById("length");
+const phase = document.getElementById("phase");
+const scaleInput = document.getElementById("scale");
+const durationInput = document.getElementById("duration");
+function setup(e) {
+  let lengthURI = (getQueryVariable("length") &&
+    getQueryVariable("length")
+      .split(",")
+      .map((length) => parseFloat(length.trim()))) || [1, -1, 1];
+  let phaseURI = (getQueryVariable("phase") &&
+    getQueryVariable("phase")
+      .split(",")
+      .map((length) => parseFloat(length.trim()))) || [0, 0, 0];
+  let scaleURI = getQueryVariable("scale");
+  let durationURI = getQueryVariable("duration");
+  for (let i = 0; i < lengthURI.length; i++) {
+    lines.push({
+      phase: phaseURI[i],
+      length: lengthURI[i],
+    });
+    if (i == 0) {
+      lines[0].sx = width / 2;
+      lines[0].sy = height / 2;
+    }
+  }
+  lengths.value = getQueryVariable("length") || "1,-1,1";
+  phase.value = getQueryVariable("phase") || "0,0,0";
+  scale = scaleInput.value = parseFloat(scaleURI) || 50;
+  duration = durationInput.value = parseFloat(durationURI) || 10;
+  trail = [];
+  window.requestAnimationFrame(update);
+}
+
+function getQueryVariable(variable) {
+  var query = window.location.search.substring(1);
+  var vars = query.split("&");
+  for (var i = 0; i < vars.length; i++) {
+    var pair = vars[i].split("=");
+    if (decodeURIComponent(pair[0]) == variable) {
+      return decodeURIComponent(pair[1]);
+    }
+  }
+}
+
+setup();

@@ -1,0 +1,35 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+.canvas-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+canvas {
+  display: block;
+  border: 1px solid black;
+}
+
+.form-div {
+  display: flex;
+  justify-content: center;
+  margin: 1em;
+  align-items: center;
+}
+
+.form-div div {
+  margin: 1em;
+}
+
+.form-div button {
+  display: block;
+  width: 100%;
+  padding: 0.5em 0em;
+  border-radius: 0.5em;
+  border: none;
+  cursor: pointer;
+}
