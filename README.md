@@ -1,4 +1,4 @@
-# Chaos of three circles
+# Chaos of Fourier Circle
 
 [Watch this video](https://youtu.be/aMNpfNBn-fc)
 
